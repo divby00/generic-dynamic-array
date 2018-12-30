@@ -1,9 +1,12 @@
-#include "vector.h"
+#ifdef __RUN_TESTS__
 #include "minunit.h"
+#endif
+
+#include "vector.h"
 #include <stdlib.h>
 #include <string.h>
 
-static const size_t VECTOR_INITIAL_SIZE = 20;
+static const size_t VECTOR_INITIAL_SIZE = 1;
 
 static void double_data_size(Vector* this)
 {
@@ -98,6 +101,35 @@ static Vector* vector_map(Vector* this, struct memory_functions* memory_function
     return vector;
 }
 
+static ReducedData* vector_reduce(Vector* this, void (*reducer)(void*, void*), void* init_value, struct memory_functions* memory_functions) {
+    ReducedData* reduced_data = calloc(sizeof(struct ReducedData), 1);
+    reduced_data->free_memory = memory_functions->free_memory;
+    reduced_data->accumulator = memory_functions->allocate_memory(init_value);
+    for (size_t i=0; i<this->length; i++) {
+        reducer(reduced_data->accumulator, this->get(this, i));
+    }
+    return reduced_data;
+}
+
+static void* vector_find(Vector* this, bool (*predicate)(void* data))
+{
+#ifdef __DEBUG__
+    if (predicate == NULL) {
+        fprintf(stderr, "You can't use vector find without a predicate function\n");
+        return NULL;
+    }
+#endif
+    void* found = NULL;
+    for (size_t i = 0; i < this->length; i++) {
+        void* temp = this->get(this, i);
+        if (predicate(temp)) {
+            found = temp;
+            break;
+        }
+    }
+    return found;
+}
+
 Vector* vector_init(struct memory_functions* memory_functions)
 {
     Vector* vector = calloc(sizeof(struct Vector), 1);
@@ -111,6 +143,8 @@ Vector* vector_init(struct memory_functions* memory_functions)
     vector->get = vector_get;
     vector->filter = vector_filter;
     vector->map = vector_map;
+    vector->reduce = vector_reduce;
+    vector->find = vector_find;
     return vector;
 }
 
@@ -124,6 +158,17 @@ void vector_quit(Vector* vector)
             free(vector->data);
             vector->data = NULL;
         }
+        vector->add = NULL;
+        vector->get = NULL;
+        vector->map = NULL;
+        vector->find = NULL;
+        vector->filter = NULL;
+        vector->reduce = NULL;
+        vector->remove = NULL;
+        vector->allocate_memory = NULL;
+        vector->free_memory = NULL;
+        vector->internal_size = 0;
+        vector->length = 0;
         free(vector);
         vector = NULL;
     }
@@ -132,6 +177,8 @@ void vector_quit(Vector* vector)
 #ifdef __RUN_TESTS__
 
 Vector* vector = NULL;
+Vector* filtered_vector = NULL;
+Vector* mapped_vector = NULL;
 
 typedef struct TestData {
     size_t value;
@@ -227,7 +274,7 @@ static int filtering_elements()
     struct memory_functions memory_functions = {
         filter_allocate_memory, free_memory
     };
-    Vector* filtered_vector = vector->filter(vector, predicate, &memory_functions);
+    filtered_vector = vector->filter(vector, predicate, &memory_functions);
     return filtered_vector->length == 5;
 }
 
@@ -258,14 +305,76 @@ static int mapping_elements()
     struct memory_functions memory_functions = {
         map_allocate_memory, map_free_memory
     };
-    Vector* mapped_vector = vector->map(vector, &memory_functions);
+    mapped_vector = vector->map(vector, &memory_functions);
     return mapped_vector->length == 10;
+}
+
+static void reducer(void* accumulator, void* data) {
+    TestData* input = data;
+    size_t accumulator_size = sizeof(char) * strlen(accumulator);
+    size_t data_size = sizeof(char) * strlen(input->buffer);
+    accumulator = realloc(accumulator, accumulator_size + data_size + 1);
+    accumulator = strcat(accumulator, input->buffer);
+}
+
+static void* reduce_allocate_memory(void* data)
+{
+    char* output = calloc(sizeof(char), strlen(data) + 1);
+    strcpy(output, data);
+    return output;
+}
+
+static void reduce_free_memory(void* data)
+{
+    ReducedData* reduced = data;
+    if (reduced) {
+        if (reduced->accumulator) {
+            free(reduced->accumulator);
+            reduced->accumulator = NULL;
+        }
+        reduced->free_memory = NULL;
+        free(reduced);
+        reduced = NULL;
+    }
+}
+
+static int reduce_strings() {
+    struct memory_functions memory_functions = {
+        .allocate_memory = reduce_allocate_memory,
+        .free_memory = reduce_free_memory
+    };
+    ReducedData* reduced_data = filtered_vector->reduce(filtered_vector, reducer, "", &memory_functions);
+    bool result = !strcmp(reduced_data->accumulator, "my test data 1my test data 3my test data 5my test data 7my test data 9");
+    reduced_data->free_memory(reduced_data);
+    return result;
+}
+
+static bool find_test_data_3(void* data) {
+    TestData* input = data;
+    return !strcmp(input->buffer, "my test data 3");
+}
+
+static bool find_non_existing_data(void* data) {
+    TestData* input = data;
+    return !strcmp(input->buffer, "no data found");
+}
+
+static int find_element() {
+    TestData* test_data = vector->find(vector, find_test_data_3);
+    return !strcmp(test_data->buffer, "my test data 3");
+}
+
+static int element_not_found() {
+    TestData* test_data = vector->find(vector, find_non_existing_data);
+    return test_data == NULL;
 }
 
 static int destroy_vector()
 {
+    vector_quit(mapped_vector);
+    vector_quit(filtered_vector);
     vector_quit(vector);
-    return vector == NULL;
+    return vector == NULL && mapped_vector == NULL && filtered_vector == NULL;
 }
 
 int main(void)
@@ -274,6 +383,9 @@ int main(void)
     run_test("adding_elements", adding_elements);
     run_test("filtering_elements", filtering_elements);
     run_test("mapping_elements", mapping_elements);
+    run_test("reduce_strings", reduce_strings);
+    run_test("find_element", find_element);
+    run_test("element_not_found", element_not_found);
     run_test("destroy_vector", destroy_vector);
     show_tests_result;
 }
