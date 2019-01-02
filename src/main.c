@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
+#include <stdint.h>
 #include "vector.h"
 
 #include "minunit.h"
@@ -7,6 +10,7 @@
 Vector *vector = NULL;
 Vector *filtered_vector = NULL;
 Vector *mapped_vector = NULL;
+Vector *big_vector = NULL;
 
 typedef struct TestData {
     char *buffer;
@@ -56,6 +60,8 @@ static void free_memory(VectorElement *element) {
             free(data);
             data = NULL;
         }
+        element->free_memory = NULL;
+        element->accumulator = NULL;
         free(element);
         element = NULL;
     }
@@ -199,8 +205,10 @@ static void map_free_memory(VectorElement *element) {
                 mapped_data->mapped_buffer = NULL;
             }
             free(mapped_data);
-            mapped_data = NULL;
+            element->data = mapped_data = NULL;
         }
+        element->free_memory = NULL;
+        element->accumulator = NULL;
         free(element);
         element = NULL;
     }
@@ -297,11 +305,60 @@ static int element_not_found() {
     return test_data == NULL;
 }
 
-static int destroy_vector() {
-    vector_quit(mapped_vector);
-    vector_quit(filtered_vector);
-    vector_quit(vector);
-    return vector == NULL && mapped_vector == NULL && filtered_vector == NULL;
+static int destroy_vectors() {
+    mapped_vector = vector_quit(mapped_vector);
+    filtered_vector = vector_quit(filtered_vector);
+    vector = vector_quit(vector);
+    big_vector = vector_quit(big_vector);
+    return vector == NULL && mapped_vector == NULL && filtered_vector == NULL && big_vector == NULL;
+}
+
+VectorElement* allocate_number(void* number) {
+    VectorElement* element = calloc(sizeof(struct VectorElement), 1);
+    element->data = calloc(sizeof(size_t), 1);
+    *((size_t*)element->data) = number;
+    return element;
+}
+
+void free_number(VectorElement* element) {
+    if (element) {
+        if (element->data) {
+            free(element->data);
+            element->data = NULL;
+        }
+        element->free_memory = NULL;
+        element->accumulator = NULL;
+        free(element);
+        element = NULL;
+    }
+}
+
+static uint64_t get_posix_clock_time ()
+{
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+        return (uint64_t)(ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+    } else {
+        return 0;
+    }
+}
+
+static int inserting_a_million_records() {
+    struct memory_functions memory_functions = {
+        .allocate_memory = allocate_number,
+        .free_memory = free_number,
+        .map_allocate_memory = NULL
+    };
+    big_vector = vector_init(&memory_functions);
+    uint64_t prev_time_value, time_value;
+    prev_time_value = get_posix_clock_time();
+    for(size_t i=0; i<1000000; i++) {
+        big_vector->add(big_vector, i);
+    }
+    time_value = get_posix_clock_time();
+    float time_diff = (float)(time_value - prev_time_value) / 1000000;
+    fprintf(stdout, "Inserted in %lf seconds\n", time_diff);
+    return big_vector->length == 1000000;
 }
 
 int main(void) {
@@ -313,12 +370,13 @@ int main(void) {
     run_test("removing elements", removing_elements);
     run_test("mapping_elements", mapping_elements);
     run_test("adding elements in mapped vector", adding_elements_in_mapped_vector);
+    run_test("inserting a million records", inserting_a_million_records);
     /*
     run_test("reduce_strings", reduce_strings);
     run_test("find_element", find_element);
     run_test("element_not_found", element_not_found);
     */
-    run_test("destroying vector", destroy_vector);
+    run_test("destroying vectors", destroy_vectors);
     show_tests_result;
     return 0;
 }

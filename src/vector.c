@@ -71,9 +71,9 @@ static Vector *vector_filter(Vector *this, bool (*predicate)(VectorElement *), v
     }
 #endif
     struct memory_functions memory_functions = {
-        .allocate_memory = this->allocate_memory,
-        .free_memory = this->free_memory,
-        .map_allocate_memory = this->map_allocate_memory
+            .allocate_memory = this->allocate_memory,
+            .free_memory = this->free_memory,
+            .map_allocate_memory = this->map_allocate_memory
     };
     Vector *vector = vector_init(&memory_functions);
     for (size_t i = 0; i < this->length; i++) {
@@ -102,7 +102,7 @@ static Vector *vector_map(Vector *this, struct memory_functions *memory_function
 }
 
 static VectorElement *vector_reduce(Vector *this, void (*reducer)(void *, void *), void *init_value,
-                                  struct memory_functions *memory_functions) {
+                                    struct memory_functions *memory_functions) {
     VectorElement *reduced_data = calloc(sizeof(struct VectorElement), 1);
     reduced_data->free_memory = memory_functions->free_memory;
     reduced_data->accumulator = memory_functions->allocate_memory(init_value);
@@ -148,7 +148,7 @@ Vector *vector_init(struct memory_functions *memory_functions) {
     return vector;
 }
 
-void vector_quit(Vector *vector) {
+Vector *vector_quit(Vector *vector) {
     if (vector) {
         if (vector->elements) {
             for (size_t i = 0; i < vector->length; i++) {
@@ -169,9 +169,11 @@ void vector_quit(Vector *vector) {
         vector->remove = NULL;
         vector->allocate_memory = NULL;
         vector->free_memory = NULL;
+        vector->map_allocate_memory = NULL;
         vector->internal_size = 0;
         vector->length = 0;
         free(vector);
         vector = NULL;
     }
+    return vector;
 }

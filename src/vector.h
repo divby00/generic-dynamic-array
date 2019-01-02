@@ -32,4 +32,4 @@ typedef struct Vector {
 } Vector;
 
 Vector *vector_init(struct memory_functions *);
-void vector_quit(Vector *);
+Vector* vector_quit(Vector *);
