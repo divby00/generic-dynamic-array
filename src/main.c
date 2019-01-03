@@ -166,6 +166,7 @@ static int adding_elements_in_filtered_vector() {
 
     return filtered_vector->length == 7
            && !strcmp(td0->buffer, "my test data 1") && !strcmp(td1->buffer, "my test data 3")
+           && !strcmp(td0->buffer, "my test data 1") && !strcmp(td1->buffer, "my test data 3")
            && !strcmp(td2->buffer, "my test data 5") && !strcmp(td3->buffer, "my test data 7")
            && !strcmp(td4->buffer, "my test data 9") && !strcmp(additional01->buffer, "additional test data 01")
            && !strcmp(additional02->buffer, "additional test data 02");
@@ -285,24 +286,25 @@ static int reduce_strings() {
     return result;
 }
 
-static bool find_test_data_3(void *data) {
-    TestData *input = data;
-    return !strcmp(input->buffer, "my test data 3");
+static bool find_test_data_7(VectorElement *element) {
+    TestData *test_data = element->data;
+    return !strcmp(test_data->buffer, "my test data 7");
 }
 
-static bool find_non_existing_data(void *data) {
-    TestData *input = data;
-    return !strcmp(input->buffer, "no data found");
+static bool find_non_existing_data(VectorElement *element) {
+    TestData *test_data = element->data;
+    return !strcmp(test_data->buffer, "no data found");
 }
 
 static int find_element() {
-    TestData *test_data = vector->find(vector, find_test_data_3);
-    return !strcmp(test_data->buffer, "my test data 3");
+    VectorElement* element = vector->find(vector, find_test_data_7);
+    TestData* test_data = element->data;
+    return !strcmp(test_data->buffer, "my test data 7");
 }
 
 static int element_not_found() {
-    TestData *test_data = vector->find(vector, find_non_existing_data);
-    return test_data == NULL;
+    VectorElement* element = vector->find(vector, find_non_existing_data);
+    return element == NULL;
 }
 
 static int destroy_vectors() {
@@ -316,7 +318,7 @@ static int destroy_vectors() {
 VectorElement* allocate_number(void* number) {
     VectorElement* element = calloc(sizeof(struct VectorElement), 1);
     element->data = calloc(sizeof(size_t), 1);
-    *((size_t*)element->data) = number;
+    *((size_t*)element->data) = *((size_t*)number);
     return element;
 }
 
@@ -353,11 +355,11 @@ static int inserting_a_million_records() {
     uint64_t prev_time_value, time_value;
     prev_time_value = get_posix_clock_time();
     for(size_t i=0; i<1000000; i++) {
-        big_vector->add(big_vector, i);
+        big_vector->add(big_vector, &i);
     }
     time_value = get_posix_clock_time();
     float time_diff = (float)(time_value - prev_time_value) / 1000000;
-    fprintf(stdout, "Inserted in %lf seconds\n", time_diff);
+    fprintf(stdout, "Inserted a million records in %lf seconds\n", time_diff);
     return big_vector->length == 1000000;
 }
 
@@ -371,10 +373,10 @@ int main(void) {
     run_test("mapping_elements", mapping_elements);
     run_test("adding elements in mapped vector", adding_elements_in_mapped_vector);
     run_test("inserting a million records", inserting_a_million_records);
-    /*
-    run_test("reduce_strings", reduce_strings);
     run_test("find_element", find_element);
     run_test("element_not_found", element_not_found);
+    /*
+    run_test("reduce_strings", reduce_strings);
     */
     run_test("destroying vectors", destroy_vectors);
     show_tests_result;

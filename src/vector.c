@@ -112,7 +112,7 @@ static VectorElement *vector_reduce(Vector *this, void (*reducer)(void *, void *
     return reduced_data;
 }
 
-static void *vector_find(Vector *this, bool (*predicate)(void *)) {
+static void *vector_find(Vector *this, bool (*predicate)(VectorElement *)) {
 #ifdef __DEBUG__
     if (predicate == NULL) {
         fprintf(stderr, "You can't use vector find without a predicate function\n");
@@ -121,9 +121,9 @@ static void *vector_find(Vector *this, bool (*predicate)(void *)) {
 #endif
     void *found = NULL;
     for (size_t i = 0; i < this->length; i++) {
-        void *temp = this->get(this, i);
-        if (predicate(temp)) {
-            found = temp;
+        VectorElement *element = this->get(this, i);
+        if (predicate(element)) {
+            found = element;
             break;
         }
     }
