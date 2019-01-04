@@ -7,6 +7,6 @@ add_definitions(${DEBUG})
 
 add_executable(generic-dynamic-array
         src/minunit.h
-        src/vector.h
-        src/vector.c
+        src/array.h
+        src/array.c
         src/main.c)
