@@ -69,9 +69,9 @@ static void free_memory(VectorElement *element) {
 
 static int create_vector() {
     struct memory_functions memory_functions = {
-        .allocate_memory = allocate_memory,
-        .free_memory = free_memory,
-        .map_allocate_memory = NULL
+            .allocate_memory = allocate_memory,
+            .free_memory = free_memory,
+            .map_allocate_memory = NULL
     };
     vector = vector_init(&memory_functions);
     return vector != NULL && vector->length == 0;
@@ -217,9 +217,9 @@ static void map_free_memory(VectorElement *element) {
 
 static int mapping_elements() {
     struct memory_functions memory_functions = {
-        .allocate_memory = allocate_memory,
-        .free_memory = map_free_memory,
-        .map_allocate_memory = map_allocate_memory
+            .allocate_memory = allocate_memory,
+            .free_memory = map_free_memory,
+            .map_allocate_memory = map_allocate_memory
     };
     mapped_vector = vector->map(vector, &memory_functions);
     return mapped_vector->length == 5;
@@ -240,10 +240,10 @@ static int adding_elements_in_mapped_vector() {
     MappedTestData *td7 = (MappedTestData *) (mapped_vector->get(mapped_vector, 7))->data;
 
     return mapped_vector->length == 8
-        && !strcmp(td0->mapped_buffer, "mapped:test data 6") && !strcmp(td1->mapped_buffer, "mapped:my test data 7")
-        && !strcmp(td2->mapped_buffer, "mapped:test data 8") && !strcmp(td3->mapped_buffer, "mapped:my test data 9")
-        && !strcmp(td4->mapped_buffer, "mapped:test data 10") && !strcmp(td5->mapped_buffer, "moremappeddata0")
-        && !strcmp(td6->mapped_buffer, "moremappeddata1") && !strcmp(td7->mapped_buffer, "moremappeddata2");
+           && !strcmp(td0->mapped_buffer, "mapped:test data 6") && !strcmp(td1->mapped_buffer, "mapped:my test data 7")
+           && !strcmp(td2->mapped_buffer, "mapped:test data 8") && !strcmp(td3->mapped_buffer, "mapped:my test data 9")
+           && !strcmp(td4->mapped_buffer, "mapped:test data 10") && !strcmp(td5->mapped_buffer, "moremappeddata0")
+           && !strcmp(td6->mapped_buffer, "moremappeddata1") && !strcmp(td7->mapped_buffer, "moremappeddata2");
 }
 
 static int removing_elements_in_mapped_vector() {
@@ -266,7 +266,7 @@ static int removing_elements_in_mapped_vector() {
  */
 static void reducer(VectorElement *acc_element, VectorElement *element) {
     size_t accumulator_size = sizeof(char) * strlen(acc_element->accumulator);
-    TestData* test_data = element->data;
+    TestData *test_data = element->data;
     size_t data_size = sizeof(char) * strlen(test_data->buffer);
     acc_element->accumulator = realloc(acc_element->accumulator, accumulator_size + data_size + 1);
     strcat(acc_element->accumulator, test_data->buffer);
@@ -276,7 +276,7 @@ static void reducer(VectorElement *acc_element, VectorElement *element) {
  * Reserves accumulator memory
  */
 static VectorElement *reduce_allocate_memory(void *data) {
-    VectorElement* element = calloc(sizeof(struct VectorElement), 1);
+    VectorElement *element = calloc(sizeof(struct VectorElement), 1);
     element->accumulator = calloc(sizeof(char), strlen(data) + 1);
     strcpy(element->accumulator, data);
     return element;
@@ -296,9 +296,9 @@ static void reduce_free_memory(VectorElement *element) {
 
 static int reduce_strings() {
     struct memory_functions memory_functions = {
-        .allocate_memory = reduce_allocate_memory,
-        .free_memory = reduce_free_memory,
-        .map_allocate_memory = NULL
+            .allocate_memory = reduce_allocate_memory,
+            .free_memory = reduce_free_memory,
+            .map_allocate_memory = NULL
     };
     VectorElement *reduced_data = filtered_vector->reduce(filtered_vector, reducer, "", &memory_functions);
     bool result = !strcmp(reduced_data->accumulator, "my test data 1my test data 3");
@@ -317,13 +317,13 @@ static bool find_non_existing_data(VectorElement *element) {
 }
 
 static int find_element() {
-    VectorElement* element = vector->find(vector, find_test_data_7);
-    TestData* test_data = element->data;
+    VectorElement *element = vector->find(vector, find_test_data_7);
+    TestData *test_data = element->data;
     return !strcmp(test_data->buffer, "my test data 7");
 }
 
 static int element_not_found() {
-    VectorElement* element = vector->find(vector, find_non_existing_data);
+    VectorElement *element = vector->find(vector, find_non_existing_data);
     return element == NULL;
 }
 
@@ -335,14 +335,14 @@ static int destroy_vectors() {
     return vector == NULL && mapped_vector == NULL && filtered_vector == NULL && big_vector == NULL;
 }
 
-VectorElement* allocate_number(void* number) {
-    VectorElement* element = calloc(sizeof(struct VectorElement), 1);
+VectorElement *allocate_number(void *number) {
+    VectorElement *element = calloc(sizeof(struct VectorElement), 1);
     element->data = calloc(sizeof(size_t), 1);
-    *((size_t*)element->data) = *((size_t*)number);
+    *((size_t *) element->data) = *((size_t *) number);
     return element;
 }
 
-void free_number(VectorElement* element) {
+void free_number(VectorElement *element) {
     if (element) {
         if (element->data) {
             free(element->data);
@@ -355,11 +355,10 @@ void free_number(VectorElement* element) {
     }
 }
 
-static uint64_t get_posix_clock_time ()
-{
+static uint64_t get_posix_clock_time() {
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-        return (uint64_t)(ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+        return (uint64_t) (ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
     } else {
         return 0;
     }
@@ -367,18 +366,18 @@ static uint64_t get_posix_clock_time ()
 
 static int inserting_a_million_records() {
     struct memory_functions memory_functions = {
-        .allocate_memory = allocate_number,
-        .free_memory = free_number,
-        .map_allocate_memory = NULL
+            .allocate_memory = allocate_number,
+            .free_memory = free_number,
+            .map_allocate_memory = NULL
     };
     big_vector = vector_init(&memory_functions);
     uint64_t prev_time_value, time_value;
     prev_time_value = get_posix_clock_time();
-    for(size_t i=0; i<1000000; i++) {
+    for (size_t i = 0; i < 1000000; i++) {
         big_vector->add(big_vector, &i);
     }
     time_value = get_posix_clock_time();
-    float time_diff = (float)(time_value - prev_time_value) / 1000000;
+    float time_diff = (float) (time_value - prev_time_value) / 1000000;
     fprintf(stdout, "Inserted a million records in %lf seconds\n", time_diff);
     return big_vector->length == 1000000;
 }
