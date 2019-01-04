@@ -246,30 +246,51 @@ static int adding_elements_in_mapped_vector() {
         && !strcmp(td6->mapped_buffer, "moremappeddata1") && !strcmp(td7->mapped_buffer, "moremappeddata2");
 }
 
-static void reducer(void *accumulator, void *data) {
-    TestData *input = data;
-    size_t accumulator_size = sizeof(char) * strlen(accumulator);
-    size_t data_size = sizeof(char) * strlen(input->buffer);
-    accumulator = realloc(accumulator, accumulator_size + data_size + 1);
-    accumulator = strcat(accumulator, input->buffer);
+static int removing_elements_in_mapped_vector() {
+    mapped_vector->remove(mapped_vector, mapped_vector->length - 1);
+    mapped_vector->remove(mapped_vector, mapped_vector->length - 1);
+    mapped_vector->remove(mapped_vector, mapped_vector->length - 1);
+    mapped_vector->remove(mapped_vector, mapped_vector->length - 1);
+    mapped_vector->remove(mapped_vector, mapped_vector->length - 1);
+    mapped_vector->remove(mapped_vector, mapped_vector->length - 1);
+
+    MappedTestData *td0 = (MappedTestData *) (mapped_vector->get(mapped_vector, 0))->data;
+    MappedTestData *td1 = (MappedTestData *) (mapped_vector->get(mapped_vector, 1))->data;
+
+    return mapped_vector->length == 2
+           && !strcmp(td0->mapped_buffer, "mapped:test data 6") && !strcmp(td1->mapped_buffer, "mapped:my test data 7");
 }
 
-static void *reduce_allocate_memory(void *data) {
-    char *output = calloc(sizeof(char), strlen(data) + 1);
-    strcpy(output, data);
-    return output;
+/**
+ * Accumulator contains the computed data, element is the array element to get the data from.
+ */
+static void reducer(VectorElement *acc_element, VectorElement *element) {
+    size_t accumulator_size = sizeof(char) * strlen(acc_element->accumulator);
+    TestData* test_data = element->data;
+    size_t data_size = sizeof(char) * strlen(test_data->buffer);
+    acc_element->accumulator = realloc(acc_element->accumulator, accumulator_size + data_size + 1);
+    strcat(acc_element->accumulator, test_data->buffer);
 }
 
-static void reduce_free_memory(void *data) {
-    VectorElement *reduced = data;
-    if (reduced) {
-        if (reduced->accumulator) {
-            free(reduced->accumulator);
-            reduced->accumulator = NULL;
+/**
+ * Reserves accumulator memory
+ */
+static VectorElement *reduce_allocate_memory(void *data) {
+    VectorElement* element = calloc(sizeof(struct VectorElement), 1);
+    element->accumulator = calloc(sizeof(char), strlen(data) + 1);
+    strcpy(element->accumulator, data);
+    return element;
+}
+
+static void reduce_free_memory(VectorElement *element) {
+    if (element) {
+        if (element->accumulator) {
+            free(element->accumulator);
+            element->accumulator = NULL;
         }
-        reduced->free_memory = NULL;
-        free(reduced);
-        reduced = NULL;
+        element->free_memory = NULL;
+        free(element);
+        element = NULL;
     }
 }
 
@@ -280,8 +301,7 @@ static int reduce_strings() {
         .map_allocate_memory = NULL
     };
     VectorElement *reduced_data = filtered_vector->reduce(filtered_vector, reducer, "", &memory_functions);
-    bool result = !strcmp(reduced_data->accumulator,
-                          "my test data 1my test data 3my test data 5my test data 7my test data 9");
+    bool result = !strcmp(reduced_data->accumulator, "my test data 1my test data 3");
     reduced_data->free_memory(reduced_data);
     return result;
 }
@@ -372,12 +392,11 @@ int main(void) {
     run_test("removing elements", removing_elements);
     run_test("mapping_elements", mapping_elements);
     run_test("adding elements in mapped vector", adding_elements_in_mapped_vector);
+    run_test("removing elements in mapped vector", removing_elements_in_mapped_vector);
     run_test("inserting a million records", inserting_a_million_records);
     run_test("find_element", find_element);
     run_test("element_not_found", element_not_found);
-    /*
     run_test("reduce_strings", reduce_strings);
-    */
     run_test("destroying vectors", destroy_vectors);
     show_tests_result;
     return 0;

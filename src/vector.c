@@ -2,10 +2,10 @@
 #include <string.h>
 #include "vector.h"
 
-static const size_t VECTOR_INITIAL_SIZE = 1;
+static const size_t VECTOR_INITIAL_SIZE = 2;
 
 static void double_data_size(Vector *this) {
-    this->internal_size *= 2;
+    this->internal_size += this->internal_size / 2;
     this->elements = realloc(this->elements, this->internal_size * sizeof(struct VectorElement *));
 }
 
@@ -101,18 +101,18 @@ static Vector *vector_map(Vector *this, struct memory_functions *memory_function
     return vector;
 }
 
-static VectorElement *vector_reduce(Vector *this, void (*reducer)(void *, void *), void *init_value,
+static VectorElement *vector_reduce(Vector *this, void (*reducer)(VectorElement *, VectorElement *), void *init_value,
                                     struct memory_functions *memory_functions) {
     VectorElement *reduced_data = calloc(sizeof(struct VectorElement), 1);
     reduced_data->free_memory = memory_functions->free_memory;
     reduced_data->accumulator = memory_functions->allocate_memory(init_value);
     for (size_t i = 0; i < this->length; i++) {
-        reducer(reduced_data->accumulator, this->get(this, i));
+        reducer(reduced_data, this->get(this, i));
     }
     return reduced_data;
 }
 
-static void *vector_find(Vector *this, bool (*predicate)(VectorElement *)) {
+static VectorElement *vector_find(Vector *this, bool (*predicate)(VectorElement *)) {
 #ifdef __DEBUG__
     if (predicate == NULL) {
         fprintf(stderr, "You can't use vector find without a predicate function\n");

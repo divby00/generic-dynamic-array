@@ -27,7 +27,7 @@ typedef struct Vector {
     VectorElement *(*get)(struct Vector *, size_t);
     struct Vector *(*filter)(struct Vector *, bool (*predicate)(VectorElement *), void *(*get_data)(VectorElement *));
     struct Vector *(*map)(struct Vector *, struct memory_functions *);
-    VectorElement * (*reduce)(struct Vector *, void (*reducer)(void *, void *), void *init_value, struct memory_functions *);
+    VectorElement * (*reduce)(struct Vector *, void (*reducer)(VectorElement *, VectorElement *), void *init_value, struct memory_functions *);
     VectorElement *(*find)(struct Vector *, bool (*predicate)(VectorElement *));
 } Vector;
 
